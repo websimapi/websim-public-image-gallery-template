@@ -153,6 +153,26 @@ function updateViewCounters(views) {
   });
 }
 
+// Function to download image
+async function downloadImage(imageUrl) {
+  try {
+    const response = await fetch(imageUrl);
+    const blob = await response.blob();
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    // Extract filename from URL or use timestamp
+    const filename = imageUrl.split('/').pop() || `image-${Date.now()}.jpg`;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    window.URL.revokeObjectURL(url);
+    document.body.removeChild(a);
+  } catch (error) {
+    console.error('Error downloading image:', error);
+  }
+}
+
 // Subscribe to image changes in the database
 room.collection('images').subscribe(images => {
   const container = document.getElementById('imageContainer');
@@ -251,11 +271,27 @@ room.collection('images').subscribe(images => {
       showComments(image.id);
     });
     
+    // Add download counter/button
+    const downloadCounter = document.createElement('div');
+    downloadCounter.className = 'download-counter';
+    downloadCounter.innerHTML = `
+      <svg viewBox="0 0 24 24">
+        <path d="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z"/>
+      </svg>
+    `;
+    
+    // Add click handler to download image
+    downloadCounter.addEventListener('click', (e) => {
+      e.stopPropagation(); // Prevent fullscreen view
+      downloadImage(image.text);
+    });
+
     userInfo.appendChild(avatar);
     div.appendChild(imageContent);
     div.appendChild(userInfo);
     div.appendChild(viewsCounter);
     div.appendChild(commentCounter);
+    div.appendChild(downloadCounter); // Add the download button
     container.appendChild(div);
   });
   
