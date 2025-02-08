@@ -55,6 +55,20 @@ room.collection('images').subscribe(images => {
     div.className = 'image-box';
     div.style.backgroundImage = `url(${image.text})`; // Use uploaded URL from database
     div.setAttribute('title', image.text); // Set title attribute for hover text
+    
+    // Add user attribution
+    const userInfo = document.createElement('div');
+    userInfo.className = 'user-info';
+    userInfo.textContent = image.username;
+    
+    const avatar = document.createElement('img');
+    avatar.className = 'user-avatar';
+    avatar.src = `https://images.websim.ai/avatar/${image.username}`;
+    avatar.alt = image.username;
+    
+    userInfo.appendChild(avatar);
+    div.appendChild(userInfo);
+    
     container.appendChild(div);
   });
 });
