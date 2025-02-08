@@ -39,27 +39,32 @@ button:hover {
 .image-box {
   width: calc(25% - 15px);
   min-width: 250px;
-  padding: 10px;
   border: 1px solid #ddd;
   border-radius: 8px;
   position: relative;
-  flex-grow: 1;
+  overflow: hidden;
   display: flex;
   flex-direction: column;
 }
 
 .image-content {
   width: 100%;
-  aspect-ratio: 1;
+  padding-top: 100%; 
+  position: relative;
   background-position: center;
   background-size: cover;
   background-repeat: no-repeat;
-  margin-bottom: 40px;
-  border-radius: 4px;
   background-color: #f5f5f5;
-  display: flex;
-  align-items: center;
-  justify-content: center;
+}
+
+.image-content::after {
+  content: "";
+  display: block;
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  left: 0;
 }
 
 @media (max-width: 1200px) {
@@ -111,6 +116,7 @@ button:hover {
   border-radius: 12px;
   color: white;
   font-size: 12px;
+  z-index: 2;
 }
 
 .views-counter {
@@ -126,6 +132,7 @@ button:hover {
   align-items: center;
   gap: 4px;
   cursor: pointer;
+  z-index: 2;
 }
 
 .views-counter svg {
@@ -235,6 +242,7 @@ button:hover {
   align-items: center;
   gap: 4px;
   cursor: pointer;
+  z-index: 2;
 }
 
 .comment-counter svg {

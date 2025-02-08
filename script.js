@@ -121,7 +121,8 @@ document.getElementById('createBtn').addEventListener('click', async () => {
           
           await room.collection('images').create({
             text: uploadedUrl,
-            prompt: inputText
+            prompt: inputText,
+            username: room.party.client.username
           });
           
           img.remove();
@@ -194,7 +195,7 @@ room.collection('images').subscribe(images => {
     const userInfo = document.createElement('div');
     userInfo.className = 'user-info';
 
-    // Add copy button
+    // Add copy prompt button
     const copyButton = document.createElement('button');
     copyButton.className = 'copy-prompt-btn';
     copyButton.innerHTML = `
@@ -274,7 +275,8 @@ async function submitComment() {
   if (commentText) {
     await room.collection('comments').create({
       image_id: currentImageId,
-      comment_text: commentText
+      comment_text: commentText,
+      username: room.party.client.username
     });
     
     commentInput.value = '';
