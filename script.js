@@ -50,6 +50,18 @@ function showViewers(imageId) {
   modal.classList.add('show');
 }
 
+// Show image preview
+function showImagePreview(imageUrl, imageId) {
+  const modal = document.getElementById('imagePreviewModal');
+  const previewImage = document.getElementById('previewImage');
+  
+  previewImage.style.backgroundImage = `url(${imageUrl})`;
+  modal.classList.add('show');
+  
+  // Count as a view
+  createView(imageId);
+}
+
 // Handle image creation
 document.getElementById('createBtn').addEventListener('click', async () => {
   const inputText = document.getElementById('imageUrl').value.trim();
@@ -97,6 +109,11 @@ room.collection('images').subscribe(images => {
     imageContent.className = 'image-content';
     imageContent.style.backgroundImage = `url(${image.text})`;
     imageContent.setAttribute('title', image.text);
+    
+    // Add click handler for preview
+    imageContent.addEventListener('click', () => {
+      showImagePreview(image.text, image.id);
+    });
     
     // Add hover event listener for views
     imageContent.addEventListener('mouseenter', () => {
@@ -179,6 +196,20 @@ document.addEventListener('DOMContentLoaded', () => {
   modal.addEventListener('click', (e) => {
     if (e.target === modal) {
       modal.classList.remove('show');
+    }
+  });
+  
+  // Add preview modal close handlers
+  const previewModal = document.getElementById('imagePreviewModal');
+  const closePreviewBtn = document.getElementById('closePreview');
+  
+  closePreviewBtn.addEventListener('click', () => {
+    previewModal.classList.remove('show');
+  });
+  
+  previewModal.addEventListener('click', (e) => {
+    if (e.target === previewModal) {
+      previewModal.classList.remove('show');
     }
   });
 });
