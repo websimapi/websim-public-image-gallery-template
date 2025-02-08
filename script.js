@@ -121,8 +121,7 @@ document.getElementById('createBtn').addEventListener('click', async () => {
           
           await room.collection('images').create({
             text: uploadedUrl,
-            prompt: inputText,
-            username: room.party.client.username
+            prompt: inputText
           });
           
           img.remove();
@@ -192,10 +191,14 @@ room.collection('images').subscribe(images => {
       }
     });
     
+    imageContent.addEventListener('click', () => {
+      showFullscreenImage(image.text, image.prompt);
+    });
+
     const userInfo = document.createElement('div');
     userInfo.className = 'user-info';
 
-    // Add copy prompt button
+    // Add copy button
     const copyButton = document.createElement('button');
     copyButton.className = 'copy-prompt-btn';
     copyButton.innerHTML = `
@@ -275,8 +278,7 @@ async function submitComment() {
   if (commentText) {
     await room.collection('comments').create({
       image_id: currentImageId,
-      comment_text: commentText,
-      username: room.party.client.username
+      comment_text: commentText
     });
     
     commentInput.value = '';
@@ -338,3 +340,30 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   });
 });
+
+function showFullscreenImage(imageUrl, prompt) {
+  // Create fullscreen viewer if it doesn't exist
+  let viewer = document.getElementById('fullscreenViewer');
+  if (!viewer) {
+    viewer = document.createElement('div');
+    viewer.id = 'fullscreenViewer';
+    viewer.className = 'fullscreen-viewer';
+    document.body.appendChild(viewer);
+    
+    // Close on click outside
+    viewer.addEventListener('click', (e) => {
+      if (e.target === viewer) {
+        viewer.classList.remove('show');
+      }
+    });
+  }
+  
+  // Update viewer content
+  viewer.innerHTML = `
+    <img src="${imageUrl}" class="fullscreen-image" alt="${prompt || 'Image'}">
+    ${prompt ? `<div class="fullscreen-prompt">${prompt}</div>` : ''}
+  `;
+  
+  // Show viewer
+  viewer.classList.add('show');
+}
