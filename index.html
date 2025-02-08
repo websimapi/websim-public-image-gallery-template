@@ -11,28 +11,31 @@
       <input type="text" id="imageUrl" placeholder="Enter text for image">
       <button id="createBtn">Create Image</button>
     </div>
-    
-    <!-- Add filter bar -->
-    <div id="filterBar" class="filter-bar">
-      <div class="filter-user">
-        <img id="filterAvatar" class="user-avatar" src="" alt="Filter user">
-        <span>Showing images by</span>
-        <strong id="filterUser"></strong>
-        <span class="clear-filter" onclick="clearFilter()">&times;</span>
-      </div>
-    </div>
-    
     <div id="imageContainer"></div>
   </div>
 
-  <!-- Viewers Modal -->
+  <!-- Modal -->
   <div id="viewersModal" class="modal">
     <div class="modal-content">
       <div class="modal-header">
-        <div class="modal-title">Image Viewers</div>
+        <div class="modal-title">Image Details</div>
         <button id="closeModal" class="close-button">&times;</button>
       </div>
-      <div id="viewersList" class="viewers-list"></div>
+      
+      <div class="modal-tabs">
+        <div class="modal-tab active" data-section="viewersList">Viewers</div>
+        <div class="modal-tab" data-section="commentsSection">Comments</div>
+      </div>
+      
+      <div id="viewersList" class="modal-content-section viewers-list active"></div>
+      
+      <div id="commentsSection" class="modal-content-section">
+        <div id="commentsList" class="comments-section"></div>
+        <div class="comment-input">
+          <input type="text" id="commentInput" placeholder="Write a comment...">
+          <button onclick="submitComment(currentImageId)">Send</button>
+        </div>
+      </div>
     </div>
   </div>
 

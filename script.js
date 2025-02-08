@@ -4,9 +4,6 @@ const room = new WebsimSocket();
 // Track hover timeouts to prevent multiple rapid views
 const hoverTimeouts = new Map();
 
-// Track current filter
-let currentFilter = null;
-
 // Create a view record for an image
 async function createView(imageId) {
   await room.collection('views').create({
@@ -53,6 +50,50 @@ function showViewers(imageId) {
   modal.classList.add('show');
 }
 
+// Show comments modal
+function showComments(imageId) {
+  const modal = document.getElementById('viewersModal');
+  const modalTitle = modal.querySelector('.modal-title');
+  const viewersList = document.getElementById('viewersList');
+  const commentsList = document.getElementById('commentsList');
+  
+  // Set up tabs
+  document.querySelectorAll('.modal-tab').forEach(tab => {
+    tab.addEventListener('click', () => {
+      document.querySelectorAll('.modal-tab').forEach(t => t.classList.remove('active'));
+      document.querySelectorAll('.modal-content-section').forEach(s => s.classList.remove('active'));
+      tab.classList.add('active');
+      document.getElementById(tab.dataset.section).classList.add('active');
+    });
+  });
+  
+  // Get comments
+  const comments = room.collection('comments').getList();
+  const imageComments = comments
+    .filter(comment => comment.image_id === imageId)
+    .sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+  
+  // Clear and populate comments list
+  commentsList.innerHTML = '';
+  imageComments.forEach(comment => {
+    const commentItem = document.createElement('div');
+    commentItem.className = 'comment-item';
+    commentItem.innerHTML = `
+      <img class="user-avatar" src="https://images.websim.ai/avatar/${comment.username}" alt="${comment.username}">
+      <div class="comment-content">
+        <div class="comment-header">
+          <span class="comment-author">${comment.username}</span>
+          <span class="comment-time">${formatDate(comment.created_at)}</span>
+        </div>
+        <div class="comment-text">${comment.comment_text}</div>
+      </div>
+    `;
+    commentsList.appendChild(commentItem);
+  });
+  
+  modal.classList.add('show');
+}
+
 // Handle image creation
 document.getElementById('createBtn').addEventListener('click', async () => {
   const inputText = document.getElementById('imageUrl').value.trim();
@@ -89,16 +130,9 @@ document.getElementById('createBtn').addEventListener('click', async () => {
 // Subscribe to image changes in the database
 room.collection('images').subscribe(images => {
   const container = document.getElementById('imageContainer');
-  const filterBar = document.getElementById('filterBar');
   container.innerHTML = '';
   
-  // Apply filter if exists
-  let filteredImages = images;
-  if (currentFilter) {
-    filteredImages = images.filter(image => image.username === currentFilter);
-  }
-  
-  filteredImages.forEach(image => {
+  images.forEach(image => {
     const div = document.createElement('div');
     div.id = 'img_' + image.id;
     div.className = 'image-box';
@@ -132,11 +166,6 @@ room.collection('images').subscribe(images => {
     userInfo.className = 'user-info';
     userInfo.textContent = image.username;
     
-    // Add click handler for filtering
-    userInfo.addEventListener('click', () => {
-      setUserFilter(image.username);
-    });
-    
     const avatar = document.createElement('img');
     avatar.className = 'user-avatar';
     avatar.src = `https://images.websim.ai/avatar/${image.username}`;
@@ -156,37 +185,28 @@ room.collection('images').subscribe(images => {
       showViewers(image.id);
     });
     
+    const commentCounter = document.createElement('div');
+    commentCounter.className = 'comment-counter';
+    commentCounter.innerHTML = `
+      <svg viewBox="0 0 24 24">
+        <path d="M21 6h-2v9H6v2c0 .55.45 1 1 1h11l4 4V7c0-.55-.45-1-1-1zm-4 6V3c0-.55-.45-1-1-1H3c-.55 0-1 .45-1 1v14l4-4h10c.55 0 1-.45 1-1z"/>
+      </svg>
+      <span id="comments_${image.id}">0</span>
+    `;
+    
+    // Add click handler to show comments
+    commentCounter.addEventListener('click', () => {
+      showComments(image.id);
+    });
+    
     userInfo.appendChild(avatar);
     div.appendChild(imageContent);
     div.appendChild(userInfo);
     div.appendChild(viewsCounter);
-    
+    div.appendChild(commentCounter);
     container.appendChild(div);
   });
-  
-  // Update filter bar visibility
-  filterBar.classList.toggle('active', currentFilter !== null);
-  if (currentFilter) {
-    const filterUser = document.getElementById('filterUser');
-    filterUser.textContent = currentFilter;
-    const filterAvatar = document.getElementById('filterAvatar');
-    filterAvatar.src = `https://images.websim.ai/avatar/${currentFilter}`;
-  }
 });
-
-// Function to set user filter
-function setUserFilter(username) {
-  currentFilter = username;
-  // Force re-render by triggering the subscription
-  room.collection('images').subscribe(() => {});
-}
-
-// Function to clear user filter
-function clearFilter() {
-  currentFilter = null;
-  // Force re-render by triggering the subscription
-  room.collection('images').subscribe(() => {});
-}
 
 // Subscribe to views and update counters
 room.collection('views').subscribe(views => {
@@ -205,6 +225,38 @@ room.collection('views').subscribe(views => {
   });
 });
 
+// Subscribe to comments and update counters
+room.collection('comments').subscribe(comments => {
+  const commentCounts = new Map();
+  
+  comments.forEach(comment => {
+    const count = commentCounts.get(comment.image_id) || 0;
+    commentCounts.set(comment.image_id, count + 1);
+  });
+  
+  commentCounts.forEach((count, imageId) => {
+    const counter = document.getElementById(`comments_${imageId}`);
+    if (counter) {
+      counter.textContent = count;
+    }
+  });
+});
+
+// Handle comment submission
+async function submitComment(imageId) {
+  const commentInput = document.getElementById('commentInput');
+  const commentText = commentInput.value.trim();
+  
+  if (commentText) {
+    await room.collection('comments').create({
+      image_id: imageId,
+      comment_text: commentText
+    });
+    
+    commentInput.value = '';
+  }
+}
+
 // Close modal when clicking outside or on close button
 document.addEventListener('DOMContentLoaded', () => {
   const modal = document.getElementById('viewersModal');
@@ -219,10 +271,4 @@ document.addEventListener('DOMContentLoaded', () => {
       modal.classList.remove('show');
     }
   });
-  
-  // Clear filter button event listener
-  const clearFilterBtn = document.getElementById('clearFilter');
-  if (clearFilterBtn) {
-    clearFilterBtn.addEventListener('click', clearFilter);
-  }
 });
