@@ -49,7 +49,18 @@ button:hover {
   background-position: center;
   background-size: cover;
   background-repeat: no-repeat;
-  margin-bottom: 30px; /* Add space for the user info below */
+  margin-bottom: 30px;
+}
+
+.hover-count {
+  position: absolute;
+  bottom: 5px;
+  left: 5px;
+  background: rgba(0, 0, 0, 0.7);
+  padding: 4px 8px;
+  border-radius: 12px;
+  color: white;
+  font-size: 12px;
 }
 
 .user-info {

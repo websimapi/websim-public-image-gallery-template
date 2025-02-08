@@ -1,6 +1,9 @@
 // Initialize WebSocket connection
 const room = new WebsimSocket();
 
+// Track hover timeouts to prevent multiple rapid hover counts
+const hoverTimeouts = new Map();
+
 // Handle image creation
 document.getElementById('createBtn').addEventListener('click', async () => {
   const inputText = document.getElementById('imageUrl').value.trim();
@@ -23,9 +26,10 @@ document.getElementById('createBtn').addEventListener('click', async () => {
           // Upload to websim storage
           const uploadedUrl = await websim.upload(blob);
           
-          // Store in database with the uploaded URL
+          // Store in database with the uploaded URL and initialize hover count
           await room.collection('images').create({
-            text: uploadedUrl
+            text: uploadedUrl,
+            hoverCount: 0
           });
           
           // Remove the temporary img element since we'll display from database
@@ -41,6 +45,30 @@ document.getElementById('createBtn').addEventListener('click', async () => {
     document.getElementById('imageContainer').appendChild(img);
   }
 });
+
+// Function to handle hover event with debounce
+const handleImageHover = async (imageId) => {
+  // Clear any existing timeout for this image
+  if (hoverTimeouts.has(imageId)) {
+    clearTimeout(hoverTimeouts.get(imageId));
+  }
+  
+  // Set a new timeout
+  hoverTimeouts.set(imageId, setTimeout(async () => {
+    try {
+      const image = await room.collection('images').get(imageId);
+      if (image) {
+        // Update the hover count
+        await room.collection('images').update(imageId, {
+          hoverCount: (image.hoverCount || 0) + 1
+        });
+      }
+    } catch (error) {
+      console.error('Error updating hover count:', error);
+    }
+    hoverTimeouts.delete(imageId);
+  }, 500)); // Debounce time of 500ms
+};
 
 // Subscribe to image changes in the database
 room.collection('images').subscribe(images => {
@@ -60,6 +88,14 @@ room.collection('images').subscribe(images => {
     imageContent.style.backgroundImage = `url(${image.text})`; // Use uploaded URL from database
     imageContent.setAttribute('title', image.text); // Set title attribute for hover text
     
+    // Add hover event listener
+    imageContent.addEventListener('mouseenter', () => handleImageHover(image.id));
+    
+    // Add hover count
+    const hoverCount = document.createElement('div');
+    hoverCount.className = 'hover-count';
+    hoverCount.textContent = `${image.hoverCount || 0} views`;
+    
     // Add user attribution
     const userInfo = document.createElement('div');
     userInfo.className = 'user-info';
@@ -72,6 +108,7 @@ room.collection('images').subscribe(images => {
     
     userInfo.appendChild(avatar);
     div.appendChild(imageContent);
+    div.appendChild(hoverCount);
     div.appendChild(userInfo);
     
     container.appendChild(div);
