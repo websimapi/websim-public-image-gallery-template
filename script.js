@@ -165,6 +165,12 @@ room.collection('images').subscribe(images => {
     div.id = 'img_' + image.id;
     div.className = 'image-box';
     
+    // Add tooltip div for the prompt text
+    const tooltip = document.createElement('div');
+    tooltip.className = 'tooltip';
+    tooltip.textContent = image.text;
+    div.appendChild(tooltip);
+    
     const imageContent = document.createElement('div');
     imageContent.className = 'image-content';
     imageContent.style.backgroundImage = `url(${image.text})`;
