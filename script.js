@@ -225,4 +225,4 @@ document.addEventListener('DOMContentLoaded', () => {
   if (clearFilterBtn) {
     clearFilterBtn.addEventListener('click', clearFilter);
   }
-']);
+});
