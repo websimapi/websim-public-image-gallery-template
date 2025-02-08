@@ -53,8 +53,12 @@ room.collection('images').subscribe(images => {
     const div = document.createElement('div');
     div.id = 'img_' + image.id;
     div.className = 'image-box';
-    div.style.backgroundImage = `url(${image.text})`; // Use uploaded URL from database
-    div.setAttribute('title', image.text); // Set title attribute for hover text
+    
+    // Create inner div for image content
+    const imageContent = document.createElement('div');
+    imageContent.className = 'image-content';
+    imageContent.style.backgroundImage = `url(${image.text})`; // Use uploaded URL from database
+    imageContent.setAttribute('title', image.text); // Set title attribute for hover text
     
     // Add user attribution
     const userInfo = document.createElement('div');
@@ -67,6 +71,7 @@ room.collection('images').subscribe(images => {
     avatar.alt = image.username;
     
     userInfo.appendChild(avatar);
+    div.appendChild(imageContent);
     div.appendChild(userInfo);
     
     container.appendChild(div);
