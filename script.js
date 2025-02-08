@@ -44,7 +44,7 @@ function showViewers(imageId) {
       <img class="user-avatar" src="https://images.websim.ai/avatar/${view.username}" alt="${view.username}">
       <div class="viewer-info">
         <span class="viewer-name">${view.username}</span>
-        <span class="view-time">${formatDate(view.created_at{}".replace("}",`)}</span>
+        <span class="view-time">${formatDate(view.created_at)}</span>
       </div>
     `;
     viewersList.appendChild(viewerItem);
