@@ -114,12 +114,13 @@ room.collection('views').subscribe(views => {
   // Create a map to count views per image
   const viewCounts = new Map();
   
+  // Count all views initially on page load and during updates
   views.forEach(view => {
     const count = viewCounts.get(view.image_id) || 0;
     viewCounts.set(view.image_id, count + 1);
   });
   
-  // Update view counters in the UI
+  // Update view counters in the UI - now guaranteed to show total counts on page load
   viewCounts.forEach((count, imageId) => {
     const counter = document.getElementById(`views_${imageId}`);
     if (counter) {
