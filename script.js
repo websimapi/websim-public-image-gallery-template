@@ -12,12 +12,31 @@ document.getElementById('createBtn').addEventListener('click', async () => {
     img.src = inputText; // Set src to exact input text
     img.alt = inputText; // Set alt to exact input text
     
-    // Store in database
-    await room.collection('images').create({
-      text: inputText
-    });
+    // Listen for when the image loads and its src changes
+    img.onload = async function() {
+      if (img.src !== inputText) { // Check if src changed from original text
+        try {
+          // Convert image to blob
+          const response = await fetch(img.src);
+          const blob = await response.blob();
+          
+          // Upload to websim storage
+          const uploadedUrl = await websim.upload(blob);
+          
+          // Store in database with the uploaded URL
+          await room.collection('images').create({
+            text: uploadedUrl
+          });
+          
+          // Remove the temporary img element since we'll display from database
+          img.remove();
+        } catch (error) {
+          console.error('Error processing image:', error);
+        }
+      }
+    };
     
-    // Clear input and add image to container
+    // Clear input and add temporary image to container
     document.getElementById('imageUrl').value = '';
     document.getElementById('imageContainer').appendChild(img);
   }
@@ -34,7 +53,7 @@ room.collection('images').subscribe(images => {
     const div = document.createElement('div');
     div.id = 'img_' + image.id;
     div.className = 'image-box';
-    div.style.backgroundImage = `url(${image.text})`; // Use exact text from database as background-image
+    div.style.backgroundImage = `url(${image.text})`; // Use uploaded URL from database
     div.setAttribute('title', image.text); // Set title attribute for hover text
     container.appendChild(div);
   });
