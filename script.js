@@ -18,9 +18,12 @@ function formatDate(dateString) {
 }
 
 // Show viewers modal
-function showViewers(imageId, views) {
+function showViewers(imageId) {
   const modal = document.getElementById('viewersModal');
   const viewersList = document.getElementById('viewersList');
+  
+  // Get views directly (getList is synchronous)
+  const views = room.collection('views').getList();
   
   // Filter views for this image and sort by creation date
   const imageViews = views
@@ -135,9 +138,7 @@ room.collection('images').subscribe(images => {
     
     // Add click handler to show viewers
     viewsCounter.addEventListener('click', () => {
-      room.collection('views').getList().then(views => {
-        showViewers(image.id, views);
-      });
+      showViewers(image.id);
     });
     
     userInfo.appendChild(avatar);
