@@ -50,6 +50,11 @@ button:hover {
   background-size: cover;
   background-repeat: no-repeat;
   margin-bottom: 30px;
+  transition: transform 0.3s ease;
+}
+
+.image-content:hover {
+  transform: scale(1.05);
 }
 
 .hover-count {
