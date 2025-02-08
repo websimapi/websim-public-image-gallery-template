@@ -1,48 +1,25 @@
 // Initialize WebSocket connection
 const room = new WebsimSocket();
 
-// Function to fetch and upload image
-async function uploadImage(imageUrl) {
-  try {
-    // Fetch the image
-    const response = await fetch(imageUrl);
-    const blob = await response.blob();
-    
-    // Create a File object from the blob
-    const file = new File([blob], 'image.jpg', { type: blob.type });
-    
-    // Upload to storage and get URL
-    const uploadedUrl = await websim.upload(file);
+// Handle image creation
+document.getElementById('createBtn').addEventListener('click', async () => {
+  const inputText = document.getElementById('imageUrl').value.trim();
+  
+  if (inputText) {
+    // Create single image element with unique ID
+    const img = document.createElement('img');
+    img.id = 'img_' + Date.now();
+    img.src = inputText; // Set src to exact input text
+    img.alt = inputText; // Set alt to exact input text
     
     // Store in database
     await room.collection('images').create({
-      originalUrl: imageUrl,
-      storedUrl: uploadedUrl
+      text: inputText
     });
     
-    return uploadedUrl;
-  } catch (error) {
-    console.error('Error uploading image:', error);
-    return imageUrl; // fallback to original URL if upload fails
-  }
-}
-
-// Handle image creation
-document.getElementById('createBtn').addEventListener('click', async () => {
-  const imageUrl = document.getElementById('imageUrl').value.trim();
-  
-  if (imageUrl) {
-    // Create image element
-    const img = document.createElement('img');
-    img.id = 'img_' + Date.now();
-    
-    // Upload image and set source
-    const uploadedUrl = await uploadImage(imageUrl);
-    img.src = uploadedUrl;
-    img.alt = 'User created image';
-    
-    document.getElementById('imageContainer').appendChild(img);
+    // Clear input and add image to container
     document.getElementById('imageUrl').value = '';
+    document.getElementById('imageContainer').appendChild(img);
   }
 });
 
@@ -56,8 +33,8 @@ room.collection('images').subscribe(images => {
   images.forEach(image => {
     const img = document.createElement('img');
     img.id = 'img_' + image.id;
-    img.src = image.storedUrl;
-    img.alt = 'User created image';
+    img.src = image.text; // Use exact text from database
+    img.alt = image.text; // Use exact text from database
     container.appendChild(img);
   });
 });
