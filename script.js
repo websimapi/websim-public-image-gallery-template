@@ -31,10 +31,11 @@ room.collection('images').subscribe(images => {
   container.innerHTML = '';
   
   images.forEach(image => {
-    const img = document.createElement('img');
-    img.id = 'img_' + image.id;
-    img.src = image.text; // Use exact text from database
-    img.alt = image.text; // Use exact text from database
-    container.appendChild(img);
+    const div = document.createElement('div');
+    div.id = 'img_' + image.id;
+    div.className = 'image-box';
+    div.style.backgroundImage = `url(${image.text})`; // Use exact text from database as background-image
+    div.setAttribute('title', image.text); // Set title attribute for hover text
+    container.appendChild(div);
   });
 });

@@ -35,10 +35,13 @@ button:hover {
   gap: 10px;
 }
 
-#imageContainer img {
-  max-width: 200px;
-  height: auto;
+.image-box {
+  width: 200px;
+  height: 200px;
   border: 1px solid #ddd;
   border-radius: 4px;
   padding: 5px;
+  background-position: center;
+  background-size: contain;
+  background-repeat: no-repeat;
 }
