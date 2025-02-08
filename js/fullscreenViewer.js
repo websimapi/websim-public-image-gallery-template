@@ -1,5 +1,4 @@
-// Fullscreen viewer functionality
-function showFullscreenImage(imageUrl, prompt) {
+export function setupFullscreenViewer() {
   let viewer = document.getElementById('fullscreenViewer');
   if (!viewer) {
     viewer = document.createElement('div');
@@ -13,6 +12,10 @@ function showFullscreenImage(imageUrl, prompt) {
       }
     });
   }
+}
+
+export function showFullscreenImage(imageUrl, prompt) {
+  const viewer = document.getElementById('fullscreenViewer');
   
   viewer.innerHTML = `
     <img src="${imageUrl}" class="fullscreen-image" alt="${prompt || 'Image'}">

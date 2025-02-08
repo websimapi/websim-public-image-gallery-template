@@ -372,6 +372,7 @@ button:hover {
   display: block;
 }
 
+/* Add new styles for fullscreen viewer */
 .fullscreen-viewer {
   display: none;
   position: fixed;
