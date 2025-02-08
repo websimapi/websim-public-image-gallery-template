@@ -17,23 +17,29 @@ function formatDate(dateString) {
   return date.toLocaleString();
 }
 
+// Calculate and update view count for an image
+function updateViewCount(imageId, views) {
+  const viewCount = views.filter(view => view.image_id === imageId).length;
+  const counter = document.getElementById(`views_${imageId}`);
+  if (counter) {
+    counter.textContent = viewCount;
+  }
+  return viewCount;
+}
+
 // Show viewers modal
 function showViewers(imageId) {
   const modal = document.getElementById('viewersModal');
   const viewersList = document.getElementById('viewersList');
   
-  // Get views directly (getList is synchronous)
   const views = room.collection('views').getList();
   
-  // Filter views for this image and sort by creation date
   const imageViews = views
     .filter(view => view.image_id === imageId)
     .sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
   
-  // Clear previous content
   viewersList.innerHTML = '';
   
-  // Add viewers to list
   imageViews.forEach(view => {
     const viewerItem = document.createElement('div');
     viewerItem.className = 'viewer-item';
@@ -48,18 +54,6 @@ function showViewers(imageId) {
   });
   
   modal.classList.add('show');
-}
-
-// Show image preview
-function showImagePreview(imageUrl, imageId) {
-  const modal = document.getElementById('imagePreviewModal');
-  const previewImage = document.getElementById('previewImage');
-  
-  previewImage.style.backgroundImage = `url(${imageUrl})`;
-  modal.classList.add('show');
-  
-  // Count as a view
-  createView(imageId);
 }
 
 // Handle image creation
@@ -79,14 +73,8 @@ document.getElementById('createBtn').addEventListener('click', async () => {
           const blob = await response.blob();
           const uploadedUrl = await websim.upload(blob);
           
-          // Create the image record
-          const imageRecord = await room.collection('images').create({
+          await room.collection('images').create({
             text: uploadedUrl
-          });
-          
-          // Create initial view for the image
-          await room.collection('views').create({
-            image_id: imageRecord.id
           });
           
           img.remove();
@@ -106,6 +94,9 @@ room.collection('images').subscribe(images => {
   const container = document.getElementById('imageContainer');
   container.innerHTML = '';
   
+  // Get current views for initial counters
+  const views = room.collection('views').getList();
+  
   images.forEach(image => {
     const div = document.createElement('div');
     div.id = 'img_' + image.id;
@@ -116,12 +107,6 @@ room.collection('images').subscribe(images => {
     imageContent.style.backgroundImage = `url(${image.text})`;
     imageContent.setAttribute('title', image.text);
     
-    // Add click handler for preview
-    imageContent.addEventListener('click', () => {
-      showImagePreview(image.text, image.id);
-    });
-    
-    // Add hover event listener for views
     imageContent.addEventListener('mouseenter', () => {
       if (hoverTimeouts.has(image.id)) {
         clearTimeout(hoverTimeouts.get(image.id));
@@ -159,7 +144,9 @@ room.collection('images').subscribe(images => {
       <span id="views_${image.id}">0</span>
     `;
     
-    // Add click handler to show viewers
+    // Set initial view count
+    updateViewCount(image.id, views);
+    
     viewsCounter.addEventListener('click', () => {
       showViewers(image.id);
     });
@@ -175,18 +162,9 @@ room.collection('images').subscribe(images => {
 
 // Subscribe to views and update counters
 room.collection('views').subscribe(views => {
-  const viewCounts = new Map();
-  
-  views.forEach(view => {
-    const count = viewCounts.get(view.image_id) || 0;
-    viewCounts.set(view.image_id, count + 1);
-  });
-  
-  viewCounts.forEach((count, imageId) => {
-    const counter = document.getElementById(`views_${imageId}`);
-    if (counter) {
-      counter.textContent = count;
-    }
+  const images = room.collection('images').getList();
+  images.forEach(image => {
+    updateViewCount(image.id, views);
   });
 });
 
@@ -202,20 +180,6 @@ document.addEventListener('DOMContentLoaded', () => {
   modal.addEventListener('click', (e) => {
     if (e.target === modal) {
       modal.classList.remove('show');
-    }
-  });
-  
-  // Add preview modal close handlers
-  const previewModal = document.getElementById('imagePreviewModal');
-  const closePreviewBtn = document.getElementById('closePreview');
-  
-  closePreviewBtn.addEventListener('click', () => {
-    previewModal.classList.remove('show');
-  });
-  
-  previewModal.addEventListener('click', (e) => {
-    if (e.target === previewModal) {
-      previewModal.classList.remove('show');
     }
   });
 });
