@@ -1,8 +1,6 @@
 // Initialize WebSocket connection
 const room = new WebsimSocket();
 
-// Track hover timeouts to prevent multiple rapid hover counts
-const hoverTimeouts = new Map();
 // Track which images have been hovered in current session
 const hoveredImages = new Set();
 
@@ -27,7 +25,7 @@ document.getElementById('createBtn').addEventListener('click', async () => {
           
           await room.collection('images').create({
             text: uploadedUrl,
-            hoverCount: 0
+            viewCount: 0
           });
           
           img.remove();
@@ -42,32 +40,35 @@ document.getElementById('createBtn').addEventListener('click', async () => {
   }
 });
 
-// Function to handle hover event with debounce
-const handleImageHover = async (imageId) => {
-  // Only increment if we haven't hovered this image in this session
+// Function to handle image view
+const handleImageView = async (imageId) => {
   if (!hoveredImages.has(imageId)) {
     hoveredImages.add(imageId);
     
     try {
-      const image = await room.collection('images').get(imageId);
-      if (image) {
-        // Update the hover count
-        await room.collection('images').update(imageId, {
-          hoverCount: (image.hoverCount || 0) + 1
-        });
-      }
+      // Create a view record
+      await room.collection('image_views').create({
+        image_id: imageId
+      });
     } catch (error) {
-      console.error('Error updating hover count:', error);
+      console.error('Error recording view:', error);
     }
   }
 };
 
-// Subscribe to image changes in the database
-room.collection('images').subscribe(images => {
+// Subscribe to image changes and views in the database
+room.collection('images').subscribe(async images => {
   const container = document.getElementById('imageContainer');
   container.innerHTML = '';
   
-  images.forEach(image => {
+  for (const image of images) {
+    // Get view count for this image
+    const views = await room.collection('image_views')
+      .filter({ image_id: image.id })
+      .getList();
+    
+    const viewCount = views.length;
+    
     const div = document.createElement('div');
     div.id = 'img_' + image.id;
     div.className = 'image-box';
@@ -78,12 +79,12 @@ room.collection('images').subscribe(images => {
     imageContent.setAttribute('title', image.text);
     
     // Add hover event listener
-    imageContent.addEventListener('mouseenter', () => handleImageHover(image.id));
+    imageContent.addEventListener('mouseenter', () => handleImageView(image.id));
     
-    // Add hover count
-    const hoverCount = document.createElement('div');
-    hoverCount.className = 'hover-count';
-    hoverCount.textContent = `${image.hoverCount || 0} views`;
+    // Add view count
+    const viewCountElement = document.createElement('div');
+    viewCountElement.className = 'hover-count';
+    viewCountElement.textContent = `${viewCount} views`;
     
     // Add user attribution
     const userInfo = document.createElement('div');
@@ -97,9 +98,27 @@ room.collection('images').subscribe(images => {
     
     userInfo.appendChild(avatar);
     div.appendChild(imageContent);
-    div.appendChild(hoverCount);
+    div.appendChild(viewCountElement);
     div.appendChild(userInfo);
     
     container.appendChild(div);
-  });
+  }
+});
+
+// Subscribe to view changes to update counters in real-time
+room.collection('image_views').subscribe(async () => {
+  const images = await room.collection('images').getList();
+  const container = document.getElementById('imageContainer');
+  
+  for (const image of images) {
+    const views = await room.collection('image_views')
+      .filter({ image_id: image.id })
+      .getList();
+    
+    const viewCount = views.length;
+    const viewCountElement = container.querySelector(`#img_${image.id} .hover-count`);
+    if (viewCountElement) {
+      viewCountElement.textContent = `${viewCount} views`;
+    }
+  }
 });
