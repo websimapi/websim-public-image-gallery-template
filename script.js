@@ -14,6 +14,11 @@ async function createView(imageId) {
   });
 }
 
+// Calculate views for an image
+function calculateViews(imageId, views) {
+  return views.filter(view => view.image_id === imageId).length;
+}
+
 // Format date for display
 function formatDate(dateString) {
   const date = new Date(dateString);
@@ -57,7 +62,7 @@ function showViewers(imageId) {
 function showComments(imageId) {
   currentImageId = imageId;
   const modal = document.getElementById('viewersModal');
-  updateCommentsUI(imageId);  // Extracted to separate function for reuse
+  updateCommentsUI(imageId);
   
   // Switch to comments tab
   document.querySelectorAll('.modal-tab').forEach(tab => tab.classList.remove('active'));
@@ -130,10 +135,30 @@ document.getElementById('createBtn').addEventListener('click', async () => {
   }
 });
 
+// Function to update view counters
+function updateViewCounters(views) {
+  const viewCounts = new Map();
+  
+  views.forEach(view => {
+    const count = viewCounts.get(view.image_id) || 0;
+    viewCounts.set(view.image_id, count + 1);
+  });
+  
+  viewCounts.forEach((count, imageId) => {
+    const counter = document.getElementById(`views_${imageId}`);
+    if (counter) {
+      counter.textContent = count;
+    }
+  });
+}
+
 // Subscribe to image changes in the database
 room.collection('images').subscribe(images => {
   const container = document.getElementById('imageContainer');
   container.innerHTML = '';
+  
+  // Get current views for initial counter setup
+  const views = room.collection('views').getList();
   
   images.forEach(image => {
     const div = document.createElement('div');
@@ -180,7 +205,7 @@ room.collection('images').subscribe(images => {
       <svg viewBox="0 0 24 24">
         <path d="M12 4.5C7 4.5 2.73 7.61 1 12c1.73 4.39 6 7.5 11 7.5s9.27-3.11 11-7.5c-1.73-4.39-6-7.5-11-7.5zM12 17c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5zm0-8c-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3-1.34-3-3-3z"/>
       </svg>
-      <span id="views_${image.id}">0</span>
+      <span id="views_${image.id}">${calculateViews(image.id, views)}</span>
     `;
     
     // Add click handler to show viewers
@@ -209,23 +234,14 @@ room.collection('images').subscribe(images => {
     div.appendChild(commentCounter);
     container.appendChild(div);
   });
+  
+  // Update view counters after adding all images
+  updateViewCounters(views);
 });
 
 // Subscribe to views and update counters
 room.collection('views').subscribe(views => {
-  const viewCounts = new Map();
-  
-  views.forEach(view => {
-    const count = viewCounts.get(view.image_id) || 0;
-    viewCounts.set(view.image_id, count + 1);
-  });
-  
-  viewCounts.forEach((count, imageId) => {
-    const counter = document.getElementById(`views_${imageId}`);
-    if (counter) {
-      counter.textContent = count;
-    }
-  });
+  updateViewCounters(views);
 });
 
 // Handle comment submission
@@ -269,20 +285,34 @@ room.collection('comments').subscribe(comments => {
   }
 });
 
-// Close modal when clicking outside or on close button
+// Set up modal tabs
 document.addEventListener('DOMContentLoaded', () => {
   const modal = document.getElementById('viewersModal');
   const closeBtn = document.getElementById('closeModal');
+  const tabs = document.querySelectorAll('.modal-tab');
+  
+  tabs.forEach(tab => {
+    tab.addEventListener('click', () => {
+      const section = tab.getAttribute('data-section');
+      
+      // Update active states
+      tabs.forEach(t => t.classList.remove('active'));
+      tab.classList.add('active');
+      
+      document.querySelectorAll('.modal-content-section').forEach(s => s.classList.remove('active'));
+      document.getElementById(section).classList.add('active');
+    });
+  });
   
   closeBtn.addEventListener('click', () => {
     modal.classList.remove('show');
-    currentImageId = null; // Reset current image ID when closing modal
+    currentImageId = null;
   });
   
   modal.addEventListener('click', (e) => {
     if (e.target === modal) {
       modal.classList.remove('show');
-      currentImageId = null; // Reset current image ID when closing modal
+      currentImageId = null;
     }
   });
 });
