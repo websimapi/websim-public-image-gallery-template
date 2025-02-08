@@ -4,6 +4,9 @@ const room = new WebsimSocket();
 // Track hover timeouts to prevent multiple rapid views
 const hoverTimeouts = new Map();
 
+// Global variable to track current image ID for comments
+let currentImageId = null;
+
 // Create a view record for an image
 async function createView(imageId) {
   await room.collection('views').create({
@@ -41,7 +44,7 @@ function showViewers(imageId) {
       <img class="user-avatar" src="https://images.websim.ai/avatar/${view.username}" alt="${view.username}">
       <div class="viewer-info">
         <span class="viewer-name">${view.username}</span>
-        <span class="view-time">${formatDate(view.created_at)}</span>
+        <span class="view-time">${formatDate(view.created_at{}".replace("}",`)}</span>
       </div>
     `;
     viewersList.appendChild(viewerItem);
@@ -52,20 +55,15 @@ function showViewers(imageId) {
 
 // Show comments modal
 function showComments(imageId) {
+  currentImageId = imageId; // Set current image ID
   const modal = document.getElementById('viewersModal');
-  const modalTitle = modal.querySelector('.modal-title');
-  const viewersList = document.getElementById('viewersList');
   const commentsList = document.getElementById('commentsList');
   
-  // Set up tabs
-  document.querySelectorAll('.modal-tab').forEach(tab => {
-    tab.addEventListener('click', () => {
-      document.querySelectorAll('.modal-tab').forEach(t => t.classList.remove('active'));
-      document.querySelectorAll('.modal-content-section').forEach(s => s.classList.remove('active'));
-      tab.classList.add('active');
-      document.getElementById(tab.dataset.section).classList.add('active');
-    });
-  });
+  // Switch to comments tab
+  document.querySelectorAll('.modal-tab').forEach(tab => tab.classList.remove('active'));
+  document.querySelectorAll('.modal-content-section').forEach(s => s.classList.remove('active'));
+  document.querySelector('[data-section="commentsSection"]').classList.add('active');
+  document.getElementById('commentsSection').classList.add('active');
   
   // Get comments
   const comments = room.collection('comments').getList();
@@ -243,13 +241,15 @@ room.collection('comments').subscribe(comments => {
 });
 
 // Handle comment submission
-async function submitComment(imageId) {
+async function submitComment() {
+  if (!currentImageId) return; // Guard against undefined image ID
+  
   const commentInput = document.getElementById('commentInput');
   const commentText = commentInput.value.trim();
   
   if (commentText) {
     await room.collection('comments').create({
-      image_id: imageId,
+      image_id: currentImageId,
       comment_text: commentText
     });
     
@@ -264,11 +264,13 @@ document.addEventListener('DOMContentLoaded', () => {
   
   closeBtn.addEventListener('click', () => {
     modal.classList.remove('show');
+    currentImageId = null; // Reset current image ID when closing modal
   });
   
   modal.addEventListener('click', (e) => {
     if (e.target === modal) {
       modal.classList.remove('show');
+      currentImageId = null; // Reset current image ID when closing modal
     }
   });
 });
