@@ -120,7 +120,8 @@ document.getElementById('createBtn').addEventListener('click', async () => {
           const uploadedUrl = await websim.upload(blob);
           
           await room.collection('images').create({
-            text: uploadedUrl
+            text: uploadedUrl,
+            prompt: inputText
           });
           
           img.remove();
@@ -165,16 +166,10 @@ room.collection('images').subscribe(images => {
     div.id = 'img_' + image.id;
     div.className = 'image-box';
     
-    // Add tooltip div for the prompt text
-    const tooltip = document.createElement('div');
-    tooltip.className = 'tooltip';
-    tooltip.textContent = image.text;
-    div.appendChild(tooltip);
-    
     const imageContent = document.createElement('div');
     imageContent.className = 'image-content';
     imageContent.style.backgroundImage = `url(${image.text})`;
-    imageContent.setAttribute('title', image.text);
+    imageContent.setAttribute('title', image.prompt || image.text);
     
     // Add hover event listener for views
     imageContent.addEventListener('mouseenter', () => {
@@ -198,7 +193,26 @@ room.collection('images').subscribe(images => {
     
     const userInfo = document.createElement('div');
     userInfo.className = 'user-info';
-    userInfo.textContent = image.username;
+
+    // Add copy button
+    const copyButton = document.createElement('button');
+    copyButton.className = 'copy-prompt-btn';
+    copyButton.innerHTML = `
+      <svg viewBox="0 0 24 24" width="16" height="16">
+        <path d="M16 1H4c-1.1 0-2 .9-2 2v14h2V3h12V1zm3 4H8c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h11c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2zm0 16H8V7h11v14z"/>
+      </svg>
+    `;
+    copyButton.title = "Copy prompt to input";
+    copyButton.addEventListener('click', (e) => {
+      e.stopPropagation(); // Prevent event bubbling
+      const input = document.getElementById('imageUrl');
+      input.value = image.prompt || image.text;
+      input.focus();
+      input.scrollIntoView({ behavior: 'smooth' });
+    });
+
+    userInfo.appendChild(copyButton);
+    userInfo.appendChild(document.createTextNode(image.username));
     
     const avatar = document.createElement('img');
     avatar.className = 'user-avatar';
