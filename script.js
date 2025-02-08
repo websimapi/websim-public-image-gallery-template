@@ -7,6 +7,11 @@ const hoverTimeouts = new Map();
 // Global variable to track current image ID for comments
 let currentImageId = null;
 
+// New variables for filtering
+let currentFilter = 'new';
+let cachedImages = [];
+let cachedViews = [];
+
 // Create a view record for an image
 async function createView(imageId) {
   await room.collection('views').create({
@@ -196,13 +201,61 @@ async function downloadImage(imageUrl) {
 
 // Subscribe to image changes in the database
 room.collection('images').subscribe(images => {
+  cachedImages = images;
+  updateGallery();
+});
+
+// Subscribe to views and update counters
+room.collection('views').subscribe(views => {
+  cachedViews = views;
+  updateViewCounters(views);
+});
+
+// New filtering functions
+function getFilteredImages() {
+  const userUsername = room.party.client.username;
+  
+  switch(currentFilter) {
+    case 'new':
+      return [...cachedImages].sort((a, b) => 
+        new Date(b.created_at) - new Date(a.created_at)
+      );
+      
+    case 'hot':
+      return [...cachedImages].sort((a, b) => {
+        const viewsA = calculateViews(a.id, cachedViews);
+        const viewsB = calculateViews(b.id, cachedViews);
+        return viewsB - viewsA;
+      });
+      
+    case 'recent':
+      const recentlyViewed = new Map();
+      cachedViews.forEach(view => {
+        recentlyViewed.set(view.image_id, 
+          Math.max(new Date(view.created_at).getTime(), 
+            recentlyViewed.get(view.image_id) || 0)
+        );
+      });
+      
+      return [...cachedImages].filter(img => recentlyViewed.has(img.id))
+        .sort((a, b) => recentlyViewed.get(b.id) - recentlyViewed.get(a.id));
+      
+    case 'yours':
+      return cachedImages.filter(img => img.username === userUsername);
+      
+    default:
+      return cachedImages;
+  }
+}
+
+// Update gallery function
+function updateGallery() {
   const container = document.getElementById('imageContainer');
   container.innerHTML = '';
   
-  // Get current views for initial counter setup
-  const views = room.collection('views').getList();
+  const filteredImages = getFilteredImages();
   
-  images.forEach(image => {
+  filteredImages.forEach(image => {
     const div = document.createElement('div');
     div.id = 'img_' + image.id;
     div.className = 'image-box';
@@ -270,7 +323,7 @@ room.collection('images').subscribe(images => {
       <svg viewBox="0 0 24 24">
         <path d="M12 4.5C7 4.5 2.73 7.61 1 12c1.73 4.39 6 7.5 11 7.5s9.27-3.11 11-7.5c-1.73-4.39-6-7.5-11-7.5zM12 17c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5zm0-8c-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3-1.34-3-3-3z"/>
       </svg>
-      <span id="views_${image.id}">${calculateViews(image.id, views)}</span>
+      <span id="views_${image.id}">${calculateViews(image.id, cachedViews)}</span>
     `;
     
     // Add click handler to show viewers
@@ -317,13 +370,81 @@ room.collection('images').subscribe(images => {
   });
   
   // Update view counters after adding all images
-  updateViewCounters(views);
+  updateViewCounters(cachedViews);
+}
+
+// Add filter button handling
+document.addEventListener('DOMContentLoaded', () => {
+  const modal = document.getElementById('viewersModal');
+  const closeBtn = document.getElementById('closeModal');
+  const tabs = document.querySelectorAll('.modal-tab');
+  
+  tabs.forEach(tab => {
+    tab.addEventListener('click', () => {
+      const section = tab.getAttribute('data-section');
+      
+      // Update active states
+      tabs.forEach(t => t.classList.remove('active'));
+      tab.classList.add('active');
+      
+      document.querySelectorAll('.modal-content-section').forEach(s => s.classList.remove('active'));
+      document.getElementById(section).classList.add('active');
+    });
+  });
+  
+  closeBtn.addEventListener('click', () => {
+    modal.classList.remove('show');
+    currentImageId = null;
+  });
+  
+  modal.addEventListener('click', (e) => {
+    if (e.target === modal) {
+      modal.classList.remove('show');
+      currentImageId = null;
+    }
+  });
+  
+  document.querySelectorAll('.filter-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      // Update active state
+      document.querySelectorAll('.filter-btn').forEach(b => 
+        b.classList.remove('active')
+      );
+      btn.classList.add('active');
+      
+      // Update filter and refresh gallery
+      currentFilter = btn.getAttribute('data-filter');
+      updateGallery();
+    });
+  });
 });
 
-// Subscribe to views and update counters
-room.collection('views').subscribe(views => {
-  updateViewCounters(views);
-});
+function showFullscreenImage(imageUrl, prompt) {
+  // Create fullscreen viewer if it doesn't exist
+  let viewer = document.getElementById('fullscreenViewer');
+  if (!viewer) {
+    viewer = document.createElement('div');
+    viewer.id = 'fullscreenViewer';
+    viewer.className = 'fullscreen-viewer';
+    document.body.appendChild(viewer);
+    
+    // Close on click outside
+    viewer.addEventListener('click', (e) => {
+      if (e.target === viewer) {
+        viewer.classList.remove('show');
+      }
+    });
+  }
+  
+  // Update viewer content
+  viewer.innerHTML = `
+    <img src="${imageUrl}" class="fullscreen-image" alt="${prompt || 'Image'}">
+    ${prompt ? `<div class="fullscreen-prompt">${prompt}</div>` : ''}
+  `;
+  
+  // Show viewer
+  viewer.classList.add('show');
+}
 
 // Handle comment submission
 async function submitComment() {
@@ -365,62 +486,3 @@ room.collection('comments').subscribe(comments => {
     updateCommentsUI(currentImageId);
   }
 });
-
-// Set up modal tabs
-document.addEventListener('DOMContentLoaded', () => {
-  const modal = document.getElementById('viewersModal');
-  const closeBtn = document.getElementById('closeModal');
-  const tabs = document.querySelectorAll('.modal-tab');
-  
-  tabs.forEach(tab => {
-    tab.addEventListener('click', () => {
-      const section = tab.getAttribute('data-section');
-      
-      // Update active states
-      tabs.forEach(t => t.classList.remove('active'));
-      tab.classList.add('active');
-      
-      document.querySelectorAll('.modal-content-section').forEach(s => s.classList.remove('active'));
-      document.getElementById(section).classList.add('active');
-    });
-  });
-  
-  closeBtn.addEventListener('click', () => {
-    modal.classList.remove('show');
-    currentImageId = null;
-  });
-  
-  modal.addEventListener('click', (e) => {
-    if (e.target === modal) {
-      modal.classList.remove('show');
-      currentImageId = null;
-    }
-  });
-});
-
-function showFullscreenImage(imageUrl, prompt) {
-  // Create fullscreen viewer if it doesn't exist
-  let viewer = document.getElementById('fullscreenViewer');
-  if (!viewer) {
-    viewer = document.createElement('div');
-    viewer.id = 'fullscreenViewer';
-    viewer.className = 'fullscreen-viewer';
-    document.body.appendChild(viewer);
-    
-    // Close on click outside
-    viewer.addEventListener('click', (e) => {
-      if (e.target === viewer) {
-        viewer.classList.remove('show');
-      }
-    });
-  }
-  
-  // Update viewer content
-  viewer.innerHTML = `
-    <img src="${imageUrl}" class="fullscreen-image" alt="${prompt || 'Image'}">
-    ${prompt ? `<div class="fullscreen-prompt">${prompt}</div>` : ''}
-  `;
-  
-  // Show viewer
-  viewer.classList.add('show');
-}
