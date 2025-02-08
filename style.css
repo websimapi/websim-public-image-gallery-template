@@ -49,23 +49,7 @@ button:hover {
   background-position: center;
   background-size: cover;
   background-repeat: no-repeat;
-  margin-bottom: 30px;
-  transition: transform 0.3s ease;
-}
-
-.image-content:hover {
-  transform: scale(1.05);
-}
-
-.hover-count {
-  position: absolute;
-  bottom: 5px;
-  left: 5px;
-  background: rgba(0, 0, 0, 0.7);
-  padding: 4px 8px;
-  border-radius: 12px;
-  color: white;
-  font-size: 12px;
+  margin-bottom: 30px; /* Add space for the user info below */
 }
 
 .user-info {
@@ -79,6 +63,26 @@ button:hover {
   border-radius: 12px;
   color: white;
   font-size: 12px;
+}
+
+.views-counter {
+  position: absolute;
+  bottom: 5px;
+  left: 5px;
+  background: rgba(0, 0, 0, 0.7);
+  padding: 4px 8px;
+  border-radius: 12px;
+  color: white;
+  font-size: 12px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.views-counter svg {
+  width: 14px;
+  height: 14px;
+  fill: currentColor;
 }
 
 .user-avatar {

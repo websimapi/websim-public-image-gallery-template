@@ -1,21 +1,26 @@
 // Initialize WebSocket connection
 const room = new WebsimSocket();
 
-// Track which images have been hovered in current session
-const hoveredImages = new Set();
+// Track hover timeouts to prevent multiple rapid views
+const hoverTimeouts = new Map();
+
+// Create a view record for an image
+async function createView(imageId) {
+  await room.collection('views').create({
+    image_id: imageId
+  });
+}
 
 // Handle image creation
 document.getElementById('createBtn').addEventListener('click', async () => {
   const inputText = document.getElementById('imageUrl').value.trim();
   
   if (inputText) {
-    // Create single image element with unique ID
     const img = document.createElement('img');
     img.id = 'img_' + Date.now();
     img.src = inputText;
     img.alt = inputText;
     
-    // Listen for when the image loads and its src changes
     img.onload = async function() {
       if (img.src !== inputText) {
         try {
@@ -24,8 +29,7 @@ document.getElementById('createBtn').addEventListener('click', async () => {
           const uploadedUrl = await websim.upload(blob);
           
           await room.collection('images').create({
-            text: uploadedUrl,
-            viewCount: 0
+            text: uploadedUrl
           });
           
           img.remove();
@@ -40,35 +44,12 @@ document.getElementById('createBtn').addEventListener('click', async () => {
   }
 });
 
-// Function to handle image view
-const handleImageView = async (imageId) => {
-  if (!hoveredImages.has(imageId)) {
-    hoveredImages.add(imageId);
-    
-    try {
-      // Create a view record
-      await room.collection('image_views').create({
-        image_id: imageId
-      });
-    } catch (error) {
-      console.error('Error recording view:', error);
-    }
-  }
-};
-
-// Subscribe to image changes and views in the database
-room.collection('images').subscribe(async images => {
+// Subscribe to image changes in the database
+room.collection('images').subscribe(images => {
   const container = document.getElementById('imageContainer');
   container.innerHTML = '';
   
-  for (const image of images) {
-    // Get view count for this image
-    const views = await room.collection('image_views')
-      .filter({ image_id: image.id })
-      .getList();
-    
-    const viewCount = views.length;
-    
+  images.forEach(image => {
     const div = document.createElement('div');
     div.id = 'img_' + image.id;
     div.className = 'image-box';
@@ -79,14 +60,28 @@ room.collection('images').subscribe(async images => {
     imageContent.setAttribute('title', image.text);
     
     // Add hover event listener
-    imageContent.addEventListener('mouseenter', () => handleImageView(image.id));
+    imageContent.addEventListener('mouseenter', () => {
+      // Clear any existing timeout for this image
+      if (hoverTimeouts.has(image.id)) {
+        clearTimeout(hoverTimeouts.get(image.id));
+      }
+      
+      // Set new timeout
+      const timeout = setTimeout(() => {
+        createView(image.id);
+      }, 500); // Wait 500ms before counting as a view
+      
+      hoverTimeouts.set(image.id, timeout);
+    });
     
-    // Add view count
-    const viewCountElement = document.createElement('div');
-    viewCountElement.className = 'hover-count';
-    viewCountElement.textContent = `${viewCount} views`;
+    imageContent.addEventListener('mouseleave', () => {
+      // Clear timeout if mouse leaves before view is counted
+      if (hoverTimeouts.has(image.id)) {
+        clearTimeout(hoverTimeouts.get(image.id));
+        hoverTimeouts.delete(image.id);
+      }
+    });
     
-    // Add user attribution
     const userInfo = document.createElement('div');
     userInfo.className = 'user-info';
     userInfo.textContent = image.username;
@@ -96,29 +91,39 @@ room.collection('images').subscribe(async images => {
     avatar.src = `https://images.websim.ai/avatar/${image.username}`;
     avatar.alt = image.username;
     
+    const viewsCounter = document.createElement('div');
+    viewsCounter.className = 'views-counter';
+    viewsCounter.innerHTML = `
+      <svg viewBox="0 0 24 24">
+        <path d="M12 4.5C7 4.5 2.73 7.61 1 12c1.73 4.39 6 7.5 11 7.5s9.27-3.11 11-7.5c-1.73-4.39-6-7.5-11-7.5zM12 17c-2.76 0-5-2.24-5-5s2.24-5 5-5 5 2.24 5 5-2.24 5-5 5zm0-8c-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3-1.34-3-3-3z"/>
+      </svg>
+      <span id="views_${image.id}">0</span>
+    `;
+    
     userInfo.appendChild(avatar);
     div.appendChild(imageContent);
-    div.appendChild(viewCountElement);
     div.appendChild(userInfo);
+    div.appendChild(viewsCounter);
     
     container.appendChild(div);
-  }
+  });
 });
 
-// Subscribe to view changes to update counters in real-time
-room.collection('image_views').subscribe(async () => {
-  const images = await room.collection('images').getList();
-  const container = document.getElementById('imageContainer');
+// Subscribe to views and update counters
+room.collection('views').subscribe(views => {
+  // Create a map to count views per image
+  const viewCounts = new Map();
   
-  for (const image of images) {
-    const views = await room.collection('image_views')
-      .filter({ image_id: image.id })
-      .getList();
-    
-    const viewCount = views.length;
-    const viewCountElement = container.querySelector(`#img_${image.id} .hover-count`);
-    if (viewCountElement) {
-      viewCountElement.textContent = `${viewCount} views`;
+  views.forEach(view => {
+    const count = viewCounts.get(view.image_id) || 0;
+    viewCounts.set(view.image_id, count + 1);
+  });
+  
+  // Update view counters in the UI
+  viewCounts.forEach((count, imageId) => {
+    const counter = document.getElementById(`views_${imageId}`);
+    if (counter) {
+      counter.textContent = count;
     }
-  }
+  });
 });
