@@ -156,18 +156,39 @@ function updateViewCounters(views) {
 // Function to download image
 async function downloadImage(imageUrl) {
   try {
+    // Fetch the image
     const response = await fetch(imageUrl);
     const blob = await response.blob();
-    const url = window.URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    // Extract filename from URL or use timestamp
-    const filename = imageUrl.split('/').pop() || `image-${Date.now()}.jpg`;
-    a.download = filename;
-    document.body.appendChild(a);
-    a.click();
-    window.URL.revokeObjectURL(url);
-    document.body.removeChild(a);
+    
+    // Create a canvas to convert the image to PNG
+    const img = new Image();
+    img.crossOrigin = "anonymous";  // Enable CORS
+    
+    img.onload = () => {
+      const canvas = document.createElement('canvas');
+      canvas.width = img.width;
+      canvas.height = img.height;
+      
+      const ctx = canvas.getContext('2d');
+      ctx.drawImage(img, 0, 0);
+      
+      // Convert to PNG and download
+      canvas.toBlob((pngBlob) => {
+        const url = window.URL.createObjectURL(pngBlob);
+        const a = document.createElement('a');
+        a.href = url;
+        // Use timestamp for unique filename
+        a.download = `image-${Date.now()}.png`;
+        document.body.appendChild(a);
+        a.click();
+        window.URL.revokeObjectURL(url);
+        document.body.removeChild(a);
+      }, 'image/png');
+    };
+    
+    // Set image source from blob
+    img.src = URL.createObjectURL(blob);
+    
   } catch (error) {
     console.error('Error downloading image:', error);
   }
