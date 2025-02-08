@@ -104,10 +104,10 @@ button:hover {
   fill: white;
 }
 
-/* User info and counters */
+/* User info and counters - moved to top right corner */
 .user-info {
   position: absolute;
-  bottom: 5px;
+  top: 5px;
   right: 5px;
   display: flex;
   align-items: center;
@@ -118,6 +118,7 @@ button:hover {
   font-size: 12px;
 }
 
+/* Counters */
 .views-counter,
 .download-counter,
 .comment-counter {
