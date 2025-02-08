@@ -3,16 +3,19 @@ const room = new WebsimSocket();
 let cachedImages = [];
 let cachedViews = [];
 
-// Subscribe to image changes
-room.collection('images').subscribe(images => {
-  cachedImages = images;
-  updateGallery();
-});
+// Subscribe to image changes after all dependencies are loaded
+document.addEventListener('DOMContentLoaded', () => {
+  // Subscribe to image changes
+  room.collection('images').subscribe(images => {
+    cachedImages = images;
+    updateGallery();
+  });
 
-// Subscribe to views
-room.collection('views').subscribe(views => {
-  cachedViews = views;
-  updateViewCounters(views);
+  // Subscribe to views
+  room.collection('views').subscribe(views => {
+    cachedViews = views;
+    updateViewCounters(views);
+  });
 });
 
 // Create new image
