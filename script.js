@@ -79,8 +79,14 @@ document.getElementById('createBtn').addEventListener('click', async () => {
           const blob = await response.blob();
           const uploadedUrl = await websim.upload(blob);
           
-          await room.collection('images').create({
+          // Create the image record
+          const imageRecord = await room.collection('images').create({
             text: uploadedUrl
+          });
+          
+          // Create initial view for the image
+          await room.collection('views').create({
+            image_id: imageRecord.id
           });
           
           img.remove();
