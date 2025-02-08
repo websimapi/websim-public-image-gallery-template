@@ -55,15 +55,22 @@ function showViewers(imageId) {
 
 // Show comments modal
 function showComments(imageId) {
-  currentImageId = imageId; // Set current image ID
+  currentImageId = imageId;
   const modal = document.getElementById('viewersModal');
-  const commentsList = document.getElementById('commentsList');
+  updateCommentsUI(imageId);  // Extracted to separate function for reuse
   
   // Switch to comments tab
   document.querySelectorAll('.modal-tab').forEach(tab => tab.classList.remove('active'));
   document.querySelectorAll('.modal-content-section').forEach(s => s.classList.remove('active'));
   document.querySelector('[data-section="commentsSection"]').classList.add('active');
   document.getElementById('commentsSection').classList.add('active');
+  
+  modal.classList.add('show');
+}
+
+// Update comments UI
+function updateCommentsUI(imageId) {
+  const commentsList = document.getElementById('commentsList');
   
   // Get comments
   const comments = room.collection('comments').getList();
@@ -88,8 +95,6 @@ function showComments(imageId) {
     `;
     commentsList.appendChild(commentItem);
   });
-  
-  modal.classList.add('show');
 }
 
 // Handle image creation
@@ -223,6 +228,25 @@ room.collection('views').subscribe(views => {
   });
 });
 
+// Handle comment submission
+async function submitComment() {
+  if (!currentImageId) return;
+  
+  const commentInput = document.getElementById('commentInput');
+  const commentText = commentInput.value.trim();
+  
+  if (commentText) {
+    await room.collection('comments').create({
+      image_id: currentImageId,
+      comment_text: commentText
+    });
+    
+    commentInput.value = '';
+    // Immediately update the comments UI after submitting
+    updateCommentsUI(currentImageId);
+  }
+}
+
 // Subscribe to comments and update counters
 room.collection('comments').subscribe(comments => {
   const commentCounts = new Map();
@@ -238,24 +262,12 @@ room.collection('comments').subscribe(comments => {
       counter.textContent = count;
     }
   });
-});
-
-// Handle comment submission
-async function submitComment() {
-  if (!currentImageId) return; // Guard against undefined image ID
   
-  const commentInput = document.getElementById('commentInput');
-  const commentText = commentInput.value.trim();
-  
-  if (commentText) {
-    await room.collection('comments').create({
-      image_id: currentImageId,
-      comment_text: commentText
-    });
-    
-    commentInput.value = '';
+  // If comments modal is open, update the comments UI
+  if (currentImageId) {
+    updateCommentsUI(currentImageId);
   }
-}
+});
 
 // Close modal when clicking outside or on close button
 document.addEventListener('DOMContentLoaded', () => {
