@@ -63,6 +63,11 @@ button:hover {
   border-radius: 12px;
   color: white;
   font-size: 12px;
+  cursor: pointer;
+}
+
+.user-info:hover {
+  background: rgba(0, 0, 0, 0.8);
 }
 
 .views-counter {
@@ -172,4 +177,45 @@ button:hover {
 .view-time {
   font-size: 12px;
   color: #666;
+}
+
+.filter-bar {
+  display: none;
+  align-items: center;
+  background: #f5f5f5;
+  padding: 10px;
+  border-radius: 4px;
+  margin-bottom: 20px;
+  gap: 10px;
+}
+
+.filter-bar.active {
+  display: flex;
+}
+
+.filter-user {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: white;
+  padding: 6px 12px;
+  border-radius: 20px;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+}
+
+.filter-user img {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+}
+
+.clear-filter {
+  cursor: pointer;
+  color: #666;
+  margin-left: 8px;
+  font-weight: bold;
+}
+
+.clear-filter:hover {
+  color: #ff4444;
 }

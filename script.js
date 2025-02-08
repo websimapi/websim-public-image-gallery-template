@@ -4,6 +4,9 @@ const room = new WebsimSocket();
 // Track hover timeouts to prevent multiple rapid views
 const hoverTimeouts = new Map();
 
+// Track current filter
+let currentFilter = null;
+
 // Create a view record for an image
 async function createView(imageId) {
   await room.collection('views').create({
@@ -17,29 +20,23 @@ function formatDate(dateString) {
   return date.toLocaleString();
 }
 
-// Calculate and update view count for an image
-function updateViewCount(imageId, views) {
-  const viewCount = views.filter(view => view.image_id === imageId).length;
-  const counter = document.getElementById(`views_${imageId}`);
-  if (counter) {
-    counter.textContent = viewCount;
-  }
-  return viewCount;
-}
-
 // Show viewers modal
 function showViewers(imageId) {
   const modal = document.getElementById('viewersModal');
   const viewersList = document.getElementById('viewersList');
   
+  // Get views directly (getList is synchronous)
   const views = room.collection('views').getList();
   
+  // Filter views for this image and sort by creation date
   const imageViews = views
     .filter(view => view.image_id === imageId)
     .sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
   
+  // Clear previous content
   viewersList.innerHTML = '';
   
+  // Add viewers to list
   imageViews.forEach(view => {
     const viewerItem = document.createElement('div');
     viewerItem.className = 'viewer-item';
@@ -92,12 +89,16 @@ document.getElementById('createBtn').addEventListener('click', async () => {
 // Subscribe to image changes in the database
 room.collection('images').subscribe(images => {
   const container = document.getElementById('imageContainer');
+  const filterBar = document.getElementById('filterBar');
   container.innerHTML = '';
   
-  // Get current views for initial counters
-  const views = room.collection('views').getList();
+  // Apply filter if exists
+  let filteredImages = images;
+  if (currentFilter) {
+    filteredImages = images.filter(image => image.username === currentFilter);
+  }
   
-  images.forEach(image => {
+  filteredImages.forEach(image => {
     const div = document.createElement('div');
     div.id = 'img_' + image.id;
     div.className = 'image-box';
@@ -107,6 +108,7 @@ room.collection('images').subscribe(images => {
     imageContent.style.backgroundImage = `url(${image.text})`;
     imageContent.setAttribute('title', image.text);
     
+    // Add hover event listener for views
     imageContent.addEventListener('mouseenter', () => {
       if (hoverTimeouts.has(image.id)) {
         clearTimeout(hoverTimeouts.get(image.id));
@@ -130,6 +132,11 @@ room.collection('images').subscribe(images => {
     userInfo.className = 'user-info';
     userInfo.textContent = image.username;
     
+    // Add click handler for filtering
+    userInfo.addEventListener('click', () => {
+      setUserFilter(image.username);
+    });
+    
     const avatar = document.createElement('img');
     avatar.className = 'user-avatar';
     avatar.src = `https://images.websim.ai/avatar/${image.username}`;
@@ -144,9 +151,7 @@ room.collection('images').subscribe(images => {
       <span id="views_${image.id}">0</span>
     `;
     
-    // Set initial view count
-    updateViewCount(image.id, views);
-    
+    // Add click handler to show viewers
     viewsCounter.addEventListener('click', () => {
       showViewers(image.id);
     });
@@ -158,13 +163,45 @@ room.collection('images').subscribe(images => {
     
     container.appendChild(div);
   });
+  
+  // Update filter bar visibility
+  filterBar.classList.toggle('active', currentFilter !== null);
+  if (currentFilter) {
+    const filterUser = document.getElementById('filterUser');
+    filterUser.textContent = currentFilter;
+    const filterAvatar = document.getElementById('filterAvatar');
+    filterAvatar.src = `https://images.websim.ai/avatar/${currentFilter}`;
+  }
 });
+
+// Function to set user filter
+function setUserFilter(username) {
+  currentFilter = username;
+  // Force re-render by triggering the subscription
+  room.collection('images').subscribe(() => {});
+}
+
+// Function to clear user filter
+function clearFilter() {
+  currentFilter = null;
+  // Force re-render by triggering the subscription
+  room.collection('images').subscribe(() => {});
+}
 
 // Subscribe to views and update counters
 room.collection('views').subscribe(views => {
-  const images = room.collection('images').getList();
-  images.forEach(image => {
-    updateViewCount(image.id, views);
+  const viewCounts = new Map();
+  
+  views.forEach(view => {
+    const count = viewCounts.get(view.image_id) || 0;
+    viewCounts.set(view.image_id, count + 1);
+  });
+  
+  viewCounts.forEach((count, imageId) => {
+    const counter = document.getElementById(`views_${imageId}`);
+    if (counter) {
+      counter.textContent = count;
+    }
   });
 });
 
@@ -182,4 +219,10 @@ document.addEventListener('DOMContentLoaded', () => {
       modal.classList.remove('show');
     }
   });
-});
+  
+  // Clear filter button event listener
+  const clearFilterBtn = document.getElementById('clearFilter');
+  if (clearFilterBtn) {
+    clearFilterBtn.addEventListener('click', clearFilter);
+  }
+']);
