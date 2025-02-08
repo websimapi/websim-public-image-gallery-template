@@ -11,6 +11,42 @@ async function createView(imageId) {
   });
 }
 
+// Format date for display
+function formatDate(dateString) {
+  const date = new Date(dateString);
+  return date.toLocaleString();
+}
+
+// Show viewers modal
+function showViewers(imageId, views) {
+  const modal = document.getElementById('viewersModal');
+  const viewersList = document.getElementById('viewersList');
+  
+  // Filter views for this image and sort by creation date
+  const imageViews = views
+    .filter(view => view.image_id === imageId)
+    .sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+  
+  // Clear previous content
+  viewersList.innerHTML = '';
+  
+  // Add viewers to list
+  imageViews.forEach(view => {
+    const viewerItem = document.createElement('div');
+    viewerItem.className = 'viewer-item';
+    viewerItem.innerHTML = `
+      <img class="user-avatar" src="https://images.websim.ai/avatar/${view.username}" alt="${view.username}">
+      <div class="viewer-info">
+        <span class="viewer-name">${view.username}</span>
+        <span class="view-time">${formatDate(view.created_at)}</span>
+      </div>
+    `;
+    viewersList.appendChild(viewerItem);
+  });
+  
+  modal.classList.add('show');
+}
+
 // Handle image creation
 document.getElementById('createBtn').addEventListener('click', async () => {
   const inputText = document.getElementById('imageUrl').value.trim();
@@ -59,23 +95,20 @@ room.collection('images').subscribe(images => {
     imageContent.style.backgroundImage = `url(${image.text})`;
     imageContent.setAttribute('title', image.text);
     
-    // Add hover event listener
+    // Add hover event listener for views
     imageContent.addEventListener('mouseenter', () => {
-      // Clear any existing timeout for this image
       if (hoverTimeouts.has(image.id)) {
         clearTimeout(hoverTimeouts.get(image.id));
       }
       
-      // Set new timeout
       const timeout = setTimeout(() => {
         createView(image.id);
-      }, 500); // Wait 500ms before counting as a view
+      }, 500);
       
       hoverTimeouts.set(image.id, timeout);
     });
     
     imageContent.addEventListener('mouseleave', () => {
-      // Clear timeout if mouse leaves before view is counted
       if (hoverTimeouts.has(image.id)) {
         clearTimeout(hoverTimeouts.get(image.id));
         hoverTimeouts.delete(image.id);
@@ -100,6 +133,13 @@ room.collection('images').subscribe(images => {
       <span id="views_${image.id}">0</span>
     `;
     
+    // Add click handler to show viewers
+    viewsCounter.addEventListener('click', () => {
+      room.collection('views').getList().then(views => {
+        showViewers(image.id, views);
+      });
+    });
+    
     userInfo.appendChild(avatar);
     div.appendChild(imageContent);
     div.appendChild(userInfo);
@@ -111,20 +151,33 @@ room.collection('images').subscribe(images => {
 
 // Subscribe to views and update counters
 room.collection('views').subscribe(views => {
-  // Create a map to count views per image
   const viewCounts = new Map();
   
-  // Count all views initially on page load and during updates
   views.forEach(view => {
     const count = viewCounts.get(view.image_id) || 0;
     viewCounts.set(view.image_id, count + 1);
   });
   
-  // Update view counters in the UI - now guaranteed to show total counts on page load
   viewCounts.forEach((count, imageId) => {
     const counter = document.getElementById(`views_${imageId}`);
     if (counter) {
       counter.textContent = count;
+    }
+  });
+});
+
+// Close modal when clicking outside or on close button
+document.addEventListener('DOMContentLoaded', () => {
+  const modal = document.getElementById('viewersModal');
+  const closeBtn = document.getElementById('closeModal');
+  
+  closeBtn.addEventListener('click', () => {
+    modal.classList.remove('show');
+  });
+  
+  modal.addEventListener('click', (e) => {
+    if (e.target === modal) {
+      modal.classList.remove('show');
     }
   });
 });
