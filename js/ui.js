@@ -331,3 +331,39 @@ export async function downloadImage(imageUrl) {
     console.error('Error downloading image:', error);
   }
 }
+
+// Show loading indicator
+export function showLoading() {
+  const createBtn = document.getElementById('createBtn');
+  createBtn.disabled = true;
+  createBtn.innerHTML = 'Creating...';
+}
+
+// Hide loading indicator
+export function hideLoading() {
+  const createBtn = document.getElementById('createBtn');
+  createBtn.disabled = false;
+  createBtn.innerHTML = 'Create Image';
+}
+
+// Show error message
+export function showError(message) {
+  // Create error message element if it doesn't exist
+  let errorEl = document.getElementById('error-message');
+  if (!errorEl) {
+    errorEl = document.createElement('div');
+    errorEl.id = 'error-message';
+    errorEl.className = 'error-message';
+    const container = document.querySelector('.input-group');
+    container.parentNode.insertBefore(errorEl, container.nextSibling);
+  }
+  
+  // Set error message
+  errorEl.textContent = message;
+  errorEl.style.display = 'block';
+  
+  // Hide error after 5 seconds
+  setTimeout(() => {
+    errorEl.style.display = 'none';
+  }, 5000);
+}

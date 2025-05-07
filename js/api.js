@@ -20,8 +20,46 @@ export function subscribeToComments(callback) {
   room.collection('comments').subscribe(callback);
 }
 
+// Check if prompt is safe (not NSFW)
+export async function isPromptSafe(promptText) {
+  try {
+    const completion = await websim.chat.completions.create({
+      messages: [
+        {
+          role: "system",
+          content: `You are a content safety checker. Analyze the provided text prompt and determine if it could lead to NSFW (Not Safe For Work) content generation. 
+          This includes explicit sexual content, graphic violence, hate speech, illegal activities, or other inappropriate content.
+          Respond directly with JSON, following this JSON schema, and no other text.
+          {
+            "isSafe": boolean,
+            "reason": string
+          }`
+        },
+        {
+          role: "user",
+          content: promptText
+        }
+      ],
+      json: true
+    });
+    
+    const result = JSON.parse(completion.content);
+    return result;
+  } catch (error) {
+    console.error('Error checking prompt safety:', error);
+    return { isSafe: false, reason: "Error checking prompt safety" };
+  }
+}
+
 // Creates a new image record
 export async function createImage(promptText) {
+  // First check if the prompt is safe
+  const safetyCheck = await isPromptSafe(promptText);
+  
+  if (!safetyCheck.isSafe) {
+    throw new Error(`Prompt rejected: ${safetyCheck.reason}`);
+  }
+  
   // Use the AI image generation route
   const result = await websim.imageGen({
     prompt: promptText,

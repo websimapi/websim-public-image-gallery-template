@@ -63,9 +63,13 @@ async function handleImageCreation() {
   
   if (promptText) {
     try {
+      ui.showLoading();
       await api.createImage(promptText);
       inputField.value = '';
+      ui.hideLoading();
     } catch (error) {
+      ui.hideLoading();
+      ui.showError(error.message);
       console.error('Error creating image:', error);
     }
   }
